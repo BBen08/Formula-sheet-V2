@@ -1,8 +1,8 @@
 """
 builder.py - Build the V2 web app (the "shell": everything except the formulas).
 
-It reads the files in src/templates/ (page.html, style.css, app.js, auth.js,
-sw.js) and writes everything to web/:
+It reads the files in src/templates/ (page.html, style.css, app.js, offline.js,
+auth.js, sw.js) and writes everything to web/:
 
   web/index.html            the installable app; shows the login screen and
                             downloads the formulas from Supabase after login
@@ -64,7 +64,7 @@ BODY_MARKER = "<!-- BODY -->"   # in page.html: splits <head> content from <body
 def app_info() -> dict:
     """What the page needs to know before login (no formulas)."""
     fingerprint = hashlib.sha256((SUPABASE_URL + SUPABASE_KEY).encode())
-    for name in ("page.html", "style.css", "app.js", "auth.js"):
+    for name in ("page.html", "style.css", "app.js", "offline.js", "auth.js"):
         fingerprint.update((TEMPLATES / name).read_bytes())
     return {
         "built": datetime.now().strftime("%d %b %Y, %H:%M"),
@@ -80,12 +80,14 @@ def render_page(info: dict) -> str:
     style = (TEMPLATES / "style.css").read_text(encoding="utf-8")
     app_js = (TEMPLATES / "app.js").read_text(encoding="utf-8")
     auth_js = (TEMPLATES / "auth.js").read_text(encoding="utf-8")
+    offline_js = (TEMPLATES / "offline.js").read_text(encoding="utf-8")
     info_json = json.dumps(info, ensure_ascii=False, indent=1).replace("</", "<\\/")
 
     return (page.replace("{{APP_HEAD}}", APP_HEAD)
                 .replace("{{MATHJAX_SRC}}", MATHJAX_LOCAL)
                 .replace("{{STYLE}}", style)
                 .replace("{{APP_JS}}", app_js)
+                .replace("{{OFFLINE_JS}}", offline_js)
                 .replace("{{AUTH_JS}}", auth_js)
                 .replace("{{DATA}}", f"window.FORMULA_APP = {info_json};"))
 

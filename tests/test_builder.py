@@ -46,6 +46,9 @@ class TestInstallablePage(unittest.TestCase):
         self.assertIn('id="gate"', self.body)            # the login screen
         self.assertIn("window.FORMULA_APP", self.body)
         self.assertIn("startFormulaApp", self.body)
+        self.assertIn("window.FormulaOffline", self.body)   # offline copy (offline.js)
+        self.assertIn('data-screen="offline-old"', self.body)
+        self.assertIsNone(re.search(r"\{\{[A-Z_]+\}\}", self.html))   # every placeholder filled in
 
     def test_info_button_and_panel(self):
         self.assertIn('id="info-btn"', self.body)

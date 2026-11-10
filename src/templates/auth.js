@@ -5,7 +5,9 @@
       reads it and remembers it on this device (localStorage "formula-v2-auth").
    3. Logged in: download the cards. The database only gives them to users with
       free_access or a paid_until in the future (see supabase/schema.sql).
-      No cards -> "No access yet" screen. Cards -> start the app (app.js).
+      No cards -> "No access yet" screen. Cards -> start the app (app.js) and
+      save an offline copy (offline.js).
+   4. No internet: show the offline copy (up to 15 days old, same user).
 
    window.FORMULA_APP (written by builder.py) holds the public project address
    and publishable key. They are meant to be public: the database rules decide
@@ -14,6 +16,7 @@
   "use strict";
 
   var APP = window.FORMULA_APP;
+  var OFF = window.FormulaOffline;   // offline.js
   var $ = function (id) { return document.getElementById(id); };
   var gate = $("gate");
   var started = false;
@@ -80,13 +83,22 @@
 
   $("login-other").addEventListener("click", function () { show("login"); emailInput.focus(); });
 
+  // Log out: delete the offline copy first, then the login itself. The login is
+  // also removed from this device by hand, in case there is no internet.
   function logOut() {
-    sb.auth.signOut().then(function () { location.replace(location.pathname); });
+    function done() {
+      try { localStorage.removeItem("formula-v2-auth"); } catch (err) { /* ignore */ }
+      location.replace(location.pathname);
+    }
+    OFF.remove().then(function () { return sb.auth.signOut({ scope: "local" }); }).then(done, done);
   }
   var logoutButtons = document.querySelectorAll("[data-logout]");
   for (var i = 0; i < logoutButtons.length; i++) logoutButtons[i].addEventListener("click", logOut);
 
-  $("gate-retry").addEventListener("click", function () { location.reload(); });
+  var retryButtons = document.querySelectorAll("[data-retry]");
+  for (var k = 0; k < retryButtons.length; k++) {
+    retryButtons[k].addEventListener("click", function () { location.reload(); });
+  }
 
   // ---------- after login ----------
   function load(session) {
@@ -101,13 +113,68 @@
     }
     sb.rpc("touch_last_seen").then(function () {}, function () {});   // "last seen" for you, the owner
 
+    var userId = session.user.id;
     sb.from("cards").select("*").order("position").range(0, 4999).then(function (res) {
-      if (res.error) { started = false; return show("error"); }
-      if (!res.data.length) return noAccess(email);
-      unlock();
-      window.startFormulaApp(toData(res.data));
-      typeset();
-    }, function () { started = false; show("error"); });
+      if (res.error) {
+        started = false;
+        // status 0 = no answer at all, so no internet: use the offline copy.
+        return res.status === 0 || navigator.onLine === false ? useOfflineCopy(userId) : show("error");
+      }
+      if (!res.data.length) {               // no (longer) access: also no offline copy
+        OFF.remove();
+        return noAccess(email);
+      }
+      var data = toData(res.data);
+      OFF.save(userId, data);
+      start(data, null);
+    }, function () { started = false; useOfflineCopy(userId); });
+  }
+
+  function start(data, offlineSince) {
+    started = true;
+    unlock();
+    window.startFormulaApp(data);
+    typeset();
+    var note = $("offline-note");
+    if (offlineSince) {
+      note.textContent = "Offline: formulas from " + new Date(offlineSince).toLocaleDateString("en-GB",
+        { day: "numeric", month: "short" }) + ". Works offline for up to " + OFF.OFFLINE_DAYS + " days.";
+      note.hidden = false;
+    }
+  }
+
+  // No internet: show the saved copy if it belongs to this user and is recent.
+  function useOfflineCopy(userId) {
+    return OFF.load().then(function (copy) {
+      var decision = OFF.decide(copy, userId, Date.now());
+      if (decision === "show") start(copy.data, copy.savedAt);
+      else show(decision === "too-old" ? "offline-old" : "error", { days: String(OFF.OFFLINE_DAYS) });
+    });
+  }
+
+  // Who was logged in on this device (also readable without internet).
+  function savedUserId() {
+    try {
+      var saved = JSON.parse(localStorage.getItem("formula-v2-auth") || "null");
+      return saved && saved.user && saved.user.id;
+    } catch (err) { return null; }
+  }
+
+  // true if Supabase answers at all (any answer means we are online).
+  function online() {
+    return fetch(APP.supabaseUrl + "/auth/v1/health", { headers: { apikey: APP.supabaseKey } })
+      .then(function () { return true; }, function () { return false; });
+  }
+
+  // Not logged in according to Supabase. Without internet that can also mean
+  // "the login could not be renewed", so use the offline copy in that case.
+  function notLoggedIn() {
+    var userId = savedUserId();
+    if (!userId) return show("login");
+    online().then(function (isOnline) {
+      if (isOnline) { OFF.remove(); show("login"); }
+      else useOfflineCopy(userId);
+    });
   }
 
   // Logged in, but the database gave no cards: tell the user why.
@@ -174,7 +241,8 @@
   sb.auth.onAuthStateChange(function (event, session) {
     setTimeout(function () {
       if (session) load(session);
-      else if (event === "INITIAL_SESSION" || event === "SIGNED_OUT") show("login");
+      else if (event === "INITIAL_SESSION") notLoggedIn();
+      else if (event === "SIGNED_OUT" && !started) { OFF.remove(); show("login"); }
     }, 0);
   });
 })();

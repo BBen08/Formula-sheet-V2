@@ -65,10 +65,16 @@
       <button class="gate-btn gate-btn-quiet" type="button" data-logout>Log out</button>
     </div>
 
+    <div data-screen="offline-old" hidden>
+      <p class="gate-lead">Please connect to the internet.</p>
+      <p>Formula Finder V2 works offline for up to <span data-fill="days"></span> days. Connect to the internet once to keep using it.</p>
+      <button class="gate-btn" type="button" data-retry>Try again</button>
+    </div>
+
     <div data-screen="error" hidden>
       <p class="gate-lead">Could not load the formulas.</p>
-      <p>Formula Finder V2 needs an internet connection. Check your connection and try again.</p>
-      <button class="gate-btn" id="gate-retry" type="button">Try again</button>
+      <p>Formula Finder V2 needs an internet connection the first time. Check your connection and try again.</p>
+      <button class="gate-btn" type="button" data-retry>Try again</button>
     </div>
 
     <p class="gate-note">© 2026 Benjamin Bek. For personal study use only.</p>
@@ -97,6 +103,7 @@
 </header>
 
 <main class="wrap">
+  <p class="offline-note" id="offline-note" role="status" hidden></p>
   <nav class="chips jump" id="jump" aria-label="Jump to section"></nav>
   <div class="list" id="list"></div>
   <div class="empty" id="empty" hidden></div>
@@ -117,7 +124,7 @@
   <ul>
     <li><strong>Search</strong> by name, e.g. “integration by parts” or “buoyancy”.</li>
     <li><strong>Browse</strong> with the Math and Physics tabs and the chapter buttons.</li>
-    <li><strong>Online:</strong> this test version needs an internet connection.</li>
+    <li><strong>Offline:</strong> after opening it online once, it works without internet for up to 15 days.</li>
     <li><strong>Updates:</strong> when new formulas are added, a bar appears. Tap <strong>Reload</strong>.</li>
   </ul>
   <p class="info-note">These are personal study notes. Always check with your course material.</p>
@@ -173,6 +180,9 @@
 <script src="vendor/supabase/supabase.js"></script>
 <script>
 {{APP_JS}}
+</script>
+<script>
+{{OFFLINE_JS}}
 </script>
 <script>
 {{AUTH_JS}}

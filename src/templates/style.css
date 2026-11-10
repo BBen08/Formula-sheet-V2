@@ -301,3 +301,7 @@ html:not(.locked) .gate { display: none; }
 .info .gate-btn { width: auto; margin: 0 0 12px; }
 .gate-msg { margin-top: 12px !important; color: var(--warn); }
 .gate-note { margin: 18px 0 0 !important; color: var(--muted); font-size: 13px; }
+.offline-note {
+  margin: 12px 0 0; padding: 8px 12px; border-radius: 9px;
+  background: var(--chip); color: var(--muted); font-size: 14px;
+}
