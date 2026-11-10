@@ -1,17 +1,17 @@
 """
-builder.py - Turn the parsed Sheets into the web app.
+builder.py - Build the V2 web app (the "shell": everything except the formulas).
 
-It reads the files in src/templates/ (page.html, style.css, app.js, sw.js),
-puts your formulas in as JSON, and writes everything to web/:
+It reads the files in src/templates/ (page.html, style.css, app.js, auth.js,
+sw.js) and writes everything to web/:
 
-  web/index.html            the installable app (works offline, has the icon)
+  web/index.html            the installable app; shows the login screen and
+                            downloads the formulas from Supabase after login
   web/sw.js                 the offline helper ("service worker")
   web/manifest.webmanifest  app name, icon and colours for the Home Screen
-  web/icons/, web/vendor/   copied from src/static/ (icons and MathJax)
-  web/publish.html          the same page for a claude.ai artifact: no
-                            <html>/<body> wrapper, MathJax from the internet
+  web/icons/, web/vendor/   copied from src/static/ (icons, MathJax, supabase-js)
 
-web/ is the folder GitHub Pages publishes.
+V2 never puts formulas in web/: they are only in the database (see
+src/upload_cards.py). So web/ is safe to publish on GitHub Pages.
 """
 
 import hashlib
@@ -20,14 +20,17 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from models import Sheet
-
 SRC = Path(__file__).parent
 TEMPLATES = SRC / "templates"
 STATIC = SRC / "static"            # copied to web/ as-is
 
 MATHJAX_LOCAL = "vendor/mathjax/tex-svg-full.js"
-MATHJAX_CDN = "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg-full.js"
+
+# The Supabase project of V2. Both values are public on purpose (they are in
+# every page the browser loads); the database rules decide who sees what.
+# NEVER put the secret key here: that one is only in the local .env file.
+SUPABASE_URL = "https://hxlyqqacchkmzxohxywf.supabase.co"
+SUPABASE_KEY = "sb_publishable_W1V8DzqsYmO77RFseHsFsw_xMYLo8jk"
 
 # Extra <head> lines for the installable app (left out of publish.html).
 # "noindex" asks Google and other search engines not to list the site, so
@@ -58,35 +61,33 @@ FULL_PAGE = """<!doctype html>
 BODY_MARKER = "<!-- BODY -->"   # in page.html: splits <head> content from <body>
 
 
-def build_data(sheets: list[Sheet], sources: list[str]) -> dict:
-    sheet_dicts = [sheet.to_dict() for sheet in sheets]
-    # Fingerprint of the formulas plus the app's own files, so the app can
-    # tell whether a downloaded update really differs from what is on screen.
-    content = hashlib.sha256(json.dumps(sheet_dicts, sort_keys=True).encode())
-    for name in ("page.html", "style.css", "app.js"):
-        content.update((TEMPLATES / name).read_bytes())
+def app_info() -> dict:
+    """What the page needs to know before login (no formulas)."""
+    fingerprint = hashlib.sha256((SUPABASE_URL + SUPABASE_KEY).encode())
+    for name in ("page.html", "style.css", "app.js", "auth.js"):
+        fingerprint.update((TEMPLATES / name).read_bytes())
     return {
         "built": datetime.now().strftime("%d %b %Y, %H:%M"),
-        "version": content.hexdigest()[:12],
-        "sources": sources,
-        "sheets": sheet_dicts,
+        "version": fingerprint.hexdigest()[:12],
+        "supabaseUrl": SUPABASE_URL,
+        "supabaseKey": SUPABASE_KEY,
     }
 
 
-def render_page(data: dict, installable: bool) -> str:
+def render_page(info: dict) -> str:
     """Fill the placeholders in page.html and return the page as text."""
     page = (TEMPLATES / "page.html").read_text(encoding="utf-8")
     style = (TEMPLATES / "style.css").read_text(encoding="utf-8")
     app_js = (TEMPLATES / "app.js").read_text(encoding="utf-8")
+    auth_js = (TEMPLATES / "auth.js").read_text(encoding="utf-8")
+    info_json = json.dumps(info, ensure_ascii=False, indent=1).replace("</", "<\\/")
 
-    # "</" inside a <script> would end the script early, so escape it.
-    data_json = json.dumps(data, ensure_ascii=False, indent=1).replace("</", "<\\/")
-
-    return (page.replace("{{APP_HEAD}}", APP_HEAD if installable else "")
-                .replace("{{MATHJAX_SRC}}", MATHJAX_LOCAL if installable else MATHJAX_CDN)
+    return (page.replace("{{APP_HEAD}}", APP_HEAD)
+                .replace("{{MATHJAX_SRC}}", MATHJAX_LOCAL)
                 .replace("{{STYLE}}", style)
                 .replace("{{APP_JS}}", app_js)
-                .replace("{{DATA}}", f"window.FORMULA_DATA = {data_json};"))
+                .replace("{{AUTH_JS}}", auth_js)
+                .replace("{{DATA}}", f"window.FORMULA_APP = {info_json};"))
 
 
 def write_service_worker(out_dir: Path) -> Path:
@@ -94,7 +95,7 @@ def write_service_worker(out_dir: Path) -> Path:
     files = sorted(
         p.relative_to(out_dir).as_posix()
         for p in out_dir.rglob("*")
-        if p.is_file() and p.name not in ("sw.js", "publish.html", ".nojekyll", "LICENSE")
+        if p.is_file() and p.name not in ("sw.js", ".nojekyll", "LICENSE")
     )
     fingerprint = hashlib.sha256()
     for name in files:
@@ -109,15 +110,13 @@ def write_service_worker(out_dir: Path) -> Path:
     return path
 
 
-def write_site(sheets: list[Sheet], sources: list[str], out_dir: Path) -> list[Path]:
+def write_site(out_dir: Path) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     shutil.copytree(STATIC, out_dir, dirs_exist_ok=True)
     (out_dir / ".nojekyll").touch()      # tells GitHub Pages to serve files as they are
+    (out_dir / "publish.html").unlink(missing_ok=True)   # left over from the original app
 
-    data = build_data(sheets, sources)
     index = out_dir / "index.html"
-    publish = out_dir / "publish.html"
-    head, body = render_page(data, installable=True).split(BODY_MARKER)
+    head, body = render_page(app_info()).split(BODY_MARKER)
     index.write_text(FULL_PAGE.format(head=head.strip(), body=body.strip()), encoding="utf-8")
-    publish.write_text(render_page(data, installable=False).replace(BODY_MARKER, ""), encoding="utf-8")
-    return [index, publish, write_service_worker(out_dir)]
+    return [index, write_service_worker(out_dir)]

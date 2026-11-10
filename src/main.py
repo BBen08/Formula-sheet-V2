@@ -1,7 +1,9 @@
 """
-main.py - Run this file to (re)build the Formula Finder app.
+main.py - Run this file to (re)build the Formula Finder V2 app.
 
-    python src/main.py            build web/index.html from latex/
+V2 keeps the formulas in the database, not in the app. So:
+    python src/upload_cards.py    put new/changed formulas in the database
+    python src/main.py            build the app itself (login, layout) in web/
     python src/main.py --serve    build, then open it at http://localhost:8000
     python src/main.py --serve --lan
                                   also reachable from your phone on the same Wi-Fi
@@ -29,7 +31,6 @@ import webbrowser
 from pathlib import Path
 
 from builder import write_site
-from tex_parser import parse_sheet
 
 PROJECT = Path(__file__).resolve().parent.parent
 # V2 keeps no .tex files: it reads them (read-only) from the original app next to it.
@@ -56,26 +57,9 @@ def pretty_name(folder_name: str) -> str:
     return folder_name.replace("_", " ").replace("-", " ").title()
 
 
-def build(latex_dir: Path, out_dir: Path) -> bool:
-    sheets_found = find_sheets(latex_dir)
-    if not sheets_found:
-        print(f"No .tex files found in {latex_dir}")
-        return False
-
-    sheets, sources = [], []
-    for i, (name, tex_files) in enumerate(sheets_found):
-        unknown: set[str] = set()
-        sheet = parse_sheet(name.lower(), pretty_name(name), tex_files,
-                            SHEET_COLORS[i % len(SHEET_COLORS)], unknown)
-        sheets.append(sheet)
-        sources += [str(p.relative_to(latex_dir)).replace("\\", "/") for p in tex_files]
-
-        print(f"  {sheet.name:<14} {len(sheet.sections):>3} sections  {sheet.card_count():>4} cards")
-        if unknown:
-            print(f"    note: these LaTeX commands were left out: \\{', \\'.join(sorted(unknown))}")
-            print("          add them to latex_utils.py if they should show up.")
-
-    for path in write_site(sheets, sources, out_dir):
+def build(out_dir: Path) -> bool:
+    """Build the app shell. The formulas are NOT included (see upload_cards.py)."""
+    for path in write_site(out_dir):
         print(f"  wrote {path.relative_to(PROJECT)}")
     return True
 
@@ -127,18 +111,16 @@ def publish(message: str) -> bool:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Build the Formula Finder app from LaTeX.")
-    parser.add_argument("--latex", type=Path, default=LATEX, help="folder with your .tex files")
+    parser = argparse.ArgumentParser(description="Build the Formula Finder V2 app (without formulas).")
     parser.add_argument("--out", type=Path, default=PROJECT / "web", help="where to write the app")
     parser.add_argument("--serve", action="store_true", help="open the app in your browser afterwards")
     parser.add_argument("--lan", action="store_true", help="with --serve: allow phones on your Wi-Fi")
     parser.add_argument("--publish", action="store_true", help="test, build, commit and push to GitHub")
     parser.add_argument("-m", "--message", default="Update formulas", help="commit message for --publish")
     args = parser.parse_args(argv)
-    args.latex, args.out = args.latex.resolve(), args.out.resolve()
+    args.out = args.out.resolve()
 
-    print(f"Reading {args.latex}")
-    if not build(args.latex, args.out):
+    if not build(args.out):
         return 1
     if args.publish and not publish(args.message):
         return 1

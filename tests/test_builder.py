@@ -6,6 +6,7 @@ the page's <head>. If they end up in <body>, the Home Screen icon becomes a
 plain letter instead of the logo.
 """
 
+import re
 import sys
 import tempfile
 import unittest
@@ -17,19 +18,17 @@ sys.path.insert(0, str(ROOT / "src"))
 LATEX = ROOT.parent / "formula-app" / "latex"
 
 from builder import write_site  # noqa: E402
-from tex_parser import parse_sheet  # noqa: E402
+from upload_cards import read_sheets  # noqa: E402
 
 
 class TestInstallablePage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        sheet = parse_sheet("statics", "Statics", [LATEX / "physics/00_statics.tex"], "#1F6FB2")
         cls.tmp = tempfile.TemporaryDirectory()
         out = Path(cls.tmp.name)
-        write_site([sheet], ["statics/main.tex"], out)
-        html = (out / "index.html").read_text(encoding="utf-8")
-        cls.head, cls.body = html.split("</head>")
-        cls.publish = (out / "publish.html").read_text(encoding="utf-8")
+        write_site(out)
+        cls.html = (out / "index.html").read_text(encoding="utf-8")
+        cls.head, cls.body = cls.html.split("</head>")
         cls.out = out
 
     @classmethod
@@ -44,7 +43,9 @@ class TestInstallablePage(unittest.TestCase):
 
     def test_app_content_is_in_body(self):
         self.assertIn('id="list"', self.body)
-        self.assertIn("window.FORMULA_DATA", self.body)
+        self.assertIn('id="gate"', self.body)            # the login screen
+        self.assertIn("window.FORMULA_APP", self.body)
+        self.assertIn("startFormulaApp", self.body)
 
     def test_info_button_and_panel(self):
         self.assertIn('id="info-btn"', self.body)
@@ -67,12 +68,50 @@ class TestInstallablePage(unittest.TestCase):
 
     def test_offline_files_exist(self):
         for name in ["sw.js", "manifest.webmanifest", "icons/apple-touch-icon.png",
-                     "vendor/mathjax/tex-svg-full.js"]:
+                     "vendor/mathjax/tex-svg-full.js", "vendor/supabase/supabase.js"]:
             self.assertTrue((self.out / name).is_file(), name)
+        sw = (self.out / "sw.js").read_text(encoding="utf-8")
+        self.assertIn("vendor/supabase/supabase.js", sw)
 
-    def test_publish_version_has_no_app_install_tags(self):
-        self.assertNotIn('<link rel="manifest"', self.publish)
-        self.assertNotIn("<!-- BODY -->", self.publish)
+
+class TestNoFormulasInTheApp(unittest.TestCase):
+    """V2 is published on GitHub: the built app must not contain the formulas."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.out = Path(cls.tmp.name)
+        write_site(cls.out)
+        cls.files = {p.relative_to(cls.out).as_posix(): p.read_bytes()
+                     for p in cls.out.rglob("*") if p.is_file()}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_no_formula_data_and_no_publish_page(self):
+        self.assertNotIn("publish.html", self.files)
+        self.assertNotIn(b"FORMULA_DATA", self.files["index.html"])
+
+    def test_no_card_text_anywhere(self):
+        if not LATEX.is_dir():
+            self.skipTest("the original app's latex/ is not next to V2")
+        cards = [c for s in read_sheets(LATEX) for sec in s.sections for c in sec.cards]
+        own = [c.latex.encode() for c in cards if len(c.latex) > 40]
+        self.assertGreater(len(own), 100)
+        for name, data in self.files.items():
+            if name.startswith("vendor/"):
+                continue
+            for snippet in own:
+                self.assertNotIn(snippet, data, f"a formula ended up in {name}")
+
+    def test_no_secret_key(self):
+        # A real secret key looks like sb_secret_ + a long code. (supabase.js
+        # contains the word "sb_secret_" in a warning, which is fine.)
+        real_key = re.compile(rb"sb_secret_[A-Za-z0-9_-]{16,}")
+        for name, data in self.files.items():
+            self.assertIsNone(real_key.search(data), name)
+        self.assertNotIn(b"service_role", self.files["index.html"])
 
 
 if __name__ == "__main__":

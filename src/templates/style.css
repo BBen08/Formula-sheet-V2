@@ -263,3 +263,41 @@ mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width:
   h1 { font-size: 19px; }
   .card { padding: 11px 13px 13px; }
 }
+
+/* ---------- V2: login screens (see auth.js) ---------- */
+/* While "locked", only the login screen is shown. */
+.locked .topbar, .locked main, .locked .foot { display: none; }
+html:not(.locked) .gate { display: none; }
+.gate {
+  min-height: 100vh; min-height: 100dvh; box-sizing: border-box;
+  display: grid; place-items: center;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+}
+.gate-box {
+  width: 100%; max-width: 420px; box-sizing: border-box;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 24px;
+}
+.gate-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.gate-brand .brand-logo { width: 40px; height: 40px; }
+.gate-brand h1 { font-size: 24px; }
+.gate-lead { margin: 0 0 6px; font: 650 18px/1.3 var(--font-display); }
+.gate p { margin: 0 0 12px; }
+.gate-label { display: block; margin: 4px 0 6px; font-weight: 600; font-size: 14px; }
+.gate-input {
+  width: 100%; box-sizing: border-box; padding: 11px 12px;
+  font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 9px;
+}
+.gate-input:focus { outline: none; border-color: var(--accent); }
+.gate-btn {
+  display: block; width: 100%; margin-top: 12px; padding: 11px 14px;
+  font: 650 15px var(--font-body); cursor: pointer;
+  color: var(--accent-ink); background: var(--accent);
+  border: 1px solid var(--accent); border-radius: 9px;
+}
+.gate-btn:disabled { opacity: 0.6; cursor: wait; }
+.gate-btn-quiet { color: var(--ink); background: var(--chip); border-color: var(--line); }
+.info .gate-btn { width: auto; margin: 0 0 12px; }
+.gate-msg { margin-top: 12px !important; color: var(--warn); }
+.gate-note { margin: 18px 0 0 !important; color: var(--muted); font-size: 13px; }

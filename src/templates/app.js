@@ -1,15 +1,14 @@
 /* app.js - What the app does: tabs, chapters, search, jump links and "copy LaTeX".
-   The formulas themselves come from window.FORMULA_DATA, which builder.py
-   writes from your .tex files.
+   In V2 the formulas are not in the page: auth.js logs you in, downloads them
+   from the database and then calls startFormulaApp(DATA) below.
 
    How the page is organised:
      tab (one per folder in latex/, e.g. Math)
        chapter button (one per .tex file, e.g. Calculus)
          section heading + its formula cards */
-(function () {
+window.startFormulaApp = function (DATA) {
   "use strict";
 
-  var DATA = window.FORMULA_DATA || { sheets: [] };
   var $ = function (id) { return document.getElementById(id); };
   var list = $("list"), q = $("q"), tabsEl = $("tabs"), chaptersEl = $("chapters"), jumpEl = $("jump");
   var countEl = $("count"), emptyEl = $("empty"), footEl = $("foot");
@@ -386,7 +385,7 @@
     var checkForNewVersion = function () {
       if (!navigator.serviceWorker.controller) return;   // not installed yet
       fetch("index.html").then(function (r) { return r.text(); }).then(function (html) {
-        if (html.indexOf('"version": "' + DATA.version + '"') === -1) $("update").hidden = false;
+        if (html.indexOf('"version": "' + DATA.version + '"') === -1) $("update").hidden = false;   // a new app version
       }).catch(function () { /* offline: try again next time */ });
     };
     navigator.serviceWorker.register("sw.js").then(function (reg) {
@@ -400,7 +399,6 @@
     $("reload").addEventListener("click", function () { location.reload(); });
   }
 
-  footEl.innerHTML = "© 2026 Benjamin Bek. All rights reserved.<br>Built " + DATA.built + " from <code>" + DATA.sources.join("</code>, <code>") +
-    "</code>. Edit the LaTeX and run <code>src/main.py</code> to update.";
+  footEl.innerHTML = "© 2026 Benjamin Bek. All rights reserved.<br>Formulas updated " + DATA.built + ".";
   apply();
-})();
+};

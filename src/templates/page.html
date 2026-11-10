@@ -12,6 +12,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@500&display=swap">
 <script>
+  // Until you are logged in, only the login screen is shown (see auth.js).
+  document.documentElement.classList.add("locked");
   // Apply the saved theme (set in the info panel) before the page is drawn.
   try {
     var savedTheme = localStorage.getItem("formula-v2-theme");
@@ -22,6 +24,56 @@
 {{STYLE}}
 </style>
 <!-- BODY -->
+
+<!-- Login screens (V2). auth.js shows one of them until the formulas are loaded. -->
+<section class="gate" id="gate" aria-live="polite">
+  <div class="gate-box">
+    <div class="gate-brand">
+      <img class="brand-logo logo-for-light" src="icons/logo-navy.png" alt="" width="40" height="40">
+      <img class="brand-logo logo-for-dark" src="icons/logo-pale.png" alt="" width="40" height="40">
+      <h1>Formula Finder V2</h1>
+    </div>
+
+    <div data-screen="loading">
+      <p class="gate-lead">Loading your formulas…</p>
+    </div>
+
+    <form data-screen="login" id="login-form" hidden>
+      <p class="gate-lead">Log in to see the formulas.</p>
+      <p>You get a login link by email. No password needed.</p>
+      <label class="gate-label" for="login-email">Email address</label>
+      <input class="gate-input" id="login-email" type="email" autocomplete="email" inputmode="email" required placeholder="you@student.tudelft.nl">
+      <button class="gate-btn" id="login-send" type="submit">Send me a login link</button>
+      <p class="gate-msg" id="login-msg" role="alert" hidden></p>
+    </form>
+
+    <div data-screen="sent" hidden>
+      <p class="gate-lead">Check your email.</p>
+      <p>We sent a login link to <strong data-fill="email"></strong>. Open it on this device to log in. It can take a minute; also check your spam folder.</p>
+      <button class="gate-btn gate-btn-quiet" id="login-other" type="button">Use a different email</button>
+    </div>
+
+    <div data-screen="noaccess" hidden>
+      <p class="gate-lead">You're logged in, but you don't have access yet.</p>
+      <p>Logged in as <strong data-fill="email"></strong>. Ask the owner of Formula Finder to give you access, then reload this page.</p>
+      <button class="gate-btn gate-btn-quiet" type="button" data-logout>Log out</button>
+    </div>
+
+    <div data-screen="expired" hidden>
+      <p class="gate-lead">Your access has expired.</p>
+      <p>Logged in as <strong data-fill="email"></strong>. Ask the owner of Formula Finder to renew it, then reload this page.</p>
+      <button class="gate-btn gate-btn-quiet" type="button" data-logout>Log out</button>
+    </div>
+
+    <div data-screen="error" hidden>
+      <p class="gate-lead">Could not load the formulas.</p>
+      <p>Formula Finder V2 needs an internet connection. Check your connection and try again.</p>
+      <button class="gate-btn" id="gate-retry" type="button">Try again</button>
+    </div>
+
+    <p class="gate-note">© 2026 Benjamin Bek. For personal study use only.</p>
+  </div>
+</section>
 
 <header class="topbar" id="topbar">
   <div class="wrap topbar-inner">
@@ -65,7 +117,7 @@
   <ul>
     <li><strong>Search</strong> by name, e.g. “integration by parts” or “buoyancy”.</li>
     <li><strong>Browse</strong> with the Math and Physics tabs and the chapter buttons.</li>
-    <li><strong>Offline:</strong> once installed, it works without internet.</li>
+    <li><strong>Online:</strong> this test version needs an internet connection.</li>
     <li><strong>Updates:</strong> when new formulas are added, a bar appears. Tap <strong>Reload</strong>.</li>
   </ul>
   <p class="info-note">These are personal study notes. Always check with your course material.</p>
@@ -86,6 +138,10 @@
     <button type="button" data-theme-choice="dark">Dark</button>
   </div>
 
+  <h3>Account</h3>
+  <p>Logged in as <strong id="info-account"></strong></p>
+  <button type="button" class="gate-btn gate-btn-quiet" data-logout>Log out</button>
+
   <p class="info-note" id="info-updated"></p>
   <p class="info-note">© 2026 Benjamin Bek. All rights reserved.</p>
 </dialog>
@@ -99,14 +155,26 @@
 {{DATA}}
 </script>
 <script>
-{{APP_JS}}
-</script>
-<script>
   // MathJax draws all \( ... \) and \[ ... \] maths on the page as SVG.
+  // In V2 the formulas arrive after login, so auth.js asks MathJax to draw them.
   window.MathJax = {
     tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] },
     svg: { fontCache: "global" },
     options: { enableMenu: false },   // the right-click menu would load extra files
+    startup: {
+      typeset: false,
+      ready: function () {
+        MathJax.startup.defaultReady();
+        if (window.typesetWhenReady) MathJax.typesetPromise();
+      },
+    },
   };
+</script>
+<script src="vendor/supabase/supabase.js"></script>
+<script>
+{{APP_JS}}
+</script>
+<script>
+{{AUTH_JS}}
 </script>
 <script src="{{MATHJAX_SRC}}" async></script>
