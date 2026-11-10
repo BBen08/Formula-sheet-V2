@@ -33,6 +33,7 @@ class TestNamedFormulaStyle(unittest.TestCase):
         self.assertIsNone(cards[0][0])
 
 
+@unittest.skipUnless(LATEX.is_dir(), "needs ../formula-app/latex (not on GitHub, on purpose)")
 class TestCalculusSheet(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -62,6 +63,7 @@ class TestCalculusSheet(unittest.TestCase):
         self.assertEqual(self.unknown, set())
 
 
+@unittest.skipUnless(LATEX.is_dir(), "needs ../formula-app/latex (not on GitHub, on purpose)")
 class TestStaticsSheet(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -88,6 +90,7 @@ class TestStaticsSheet(unittest.TestCase):
         self.assertEqual(self.unknown, set())
 
 
+@unittest.skipUnless(LATEX.is_dir(), "needs ../formula-app/latex (not on GitHub, on purpose)")
 class TestChapters(unittest.TestCase):
     """Each folder in latex/ is a tab; each .tex file in it is a chapter."""
 

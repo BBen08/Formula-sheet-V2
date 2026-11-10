@@ -16,6 +16,7 @@ LATEX = ROOT.parent / "formula-app" / "latex"
 from upload_cards import card_rows, read_env, read_sheets  # noqa: E402
 
 
+@unittest.skipUnless(LATEX.is_dir(), "needs ../formula-app/latex (not on GitHub, on purpose)")
 class TestCardRows(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
