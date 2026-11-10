@@ -1,0 +1,8 @@
+{
+  // Testing panel (flask icon): runs everything in tests/ with Python's built-in unittest
+  "python.testing.unittestEnabled": true,
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "test_*.py"],
+  // So the editor finds models.py, latex_utils.py ... when you import them
+  "python.analysis.extraPaths": ["./src"]
+}

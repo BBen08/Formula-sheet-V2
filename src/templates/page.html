@@ -1,0 +1,112 @@
+<title>Formula Finder V2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--
+  page.html - The layout of the app.
+  builder.py fills in the {{...}} placeholders and writes the result to web/.
+  Edit this file (not web/index.html, which is overwritten on every build).
+  Everything above the "BODY" line goes in the page's <head>: iPhones only
+  look there for the app icon and name.
+-->
+{{APP_HEAD}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@500&display=swap">
+<script>
+  // Apply the saved theme (set in the info panel) before the page is drawn.
+  try {
+    var savedTheme = localStorage.getItem("formula-v2-theme");
+    if (savedTheme === "light" || savedTheme === "dark") document.documentElement.setAttribute("data-theme", savedTheme);
+  } catch (err) { /* storage blocked: follow the device */ }
+</script>
+<style>
+{{STYLE}}
+</style>
+<!-- BODY -->
+
+<header class="topbar" id="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <div class="title">
+        <img class="brand-logo logo-for-light" src="icons/logo-navy.png" alt="" width="34" height="34">
+        <img class="brand-logo logo-for-dark" src="icons/logo-pale.png" alt="" width="34" height="34">
+        <h1>Formula Finder V2</h1>
+        <button type="button" class="info-btn" id="info-btn" aria-label="About this app and how to install it" aria-haspopup="dialog">i</button>
+      </div>
+      <span class="stat" id="count"></span>
+    </div>
+    <label class="search" for="q">
+      <span class="visually-hidden">Search formulas</span>
+      <input id="q" type="search" placeholder="Search, e.g. integration by parts" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <kbd class="kbd" aria-hidden="true">/</kbd>
+    </label>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Subjects"></nav>
+    <nav class="chips" id="chapters" aria-label="Chapters"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="chips jump" id="jump" aria-label="Jump to section"></nav>
+  <div class="list" id="list"></div>
+  <div class="empty" id="empty" hidden></div>
+</main>
+
+<footer class="wrap foot" id="foot"></footer>
+
+<!-- Info panel: opens with the (i) button next to the title. -->
+<dialog class="info" id="info" aria-labelledby="info-title">
+  <div class="info-head">
+    <h2 id="info-title">Formula Finder V2</h2>
+    <button type="button" class="info-close" id="info-close" aria-label="Close">✕</button>
+  </div>
+  <p class="owner-msg" id="owner-msg" role="status" hidden></p>
+
+  <h3>What this app does</h3>
+  <p>Formula Finder is a searchable collection of about 600 formulas for Mechanical Engineering students: Calculus, Statics, and general Math &amp; Physics.</p>
+  <ul>
+    <li><strong>Search</strong> by name, e.g. “integration by parts” or “buoyancy”.</li>
+    <li><strong>Browse</strong> with the Math and Physics tabs and the chapter buttons.</li>
+    <li><strong>Offline:</strong> once installed, it works without internet.</li>
+    <li><strong>Updates:</strong> when new formulas are added, a bar appears. Tap <strong>Reload</strong>.</li>
+  </ul>
+  <p class="info-note">These are personal study notes. Always check with your course material.</p>
+  <p class="info-note">For personal study use only. Please don't copy, share publicly or sell the content.</p>
+
+  <h3>How to install it</h3>
+  <p id="info-installed" hidden>✓ You're using the installed app.</p>
+  <div id="info-install">
+    <p>📱 <strong>iPhone / iPad:</strong> open this page in <strong>Safari</strong> → tap <strong>Share</strong> (square with arrow) → <strong>Add to Home Screen</strong> → <strong>Add</strong>.</p>
+    <p>🤖 <strong>Android:</strong> open this page in <strong>Chrome</strong> → tap <strong>⋮</strong> → <strong>Install app</strong> (or <strong>Add to Home screen</strong>).</p>
+    <p>💻 <strong>Laptop:</strong> in <strong>Chrome or Edge</strong>, click the install icon on the right of the address bar. On a <strong>Mac in Safari</strong>: <strong>File → Add to Dock</strong>.</p>
+  </div>
+
+  <h3>Theme</h3>
+  <div class="theme-choice" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="auto">Auto</button>
+    <button type="button" data-theme-choice="light">Light</button>
+    <button type="button" data-theme-choice="dark">Dark</button>
+  </div>
+
+  <p class="info-note" id="info-updated"></p>
+  <p class="info-note">© 2026 Benjamin Bek. All rights reserved.</p>
+</dialog>
+
+<div class="update" id="update" role="status" hidden>
+  <span>New formulas are available.</span>
+  <button type="button" id="reload">Reload</button>
+</div>
+
+<script>
+{{DATA}}
+</script>
+<script>
+{{APP_JS}}
+</script>
+<script>
+  // MathJax draws all \( ... \) and \[ ... \] maths on the page as SVG.
+  window.MathJax = {
+    tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] },
+    svg: { fontCache: "global" },
+    options: { enableMenu: false },   // the right-click menu would load extra files
+  };
+</script>
+<script src="{{MATHJAX_SRC}}" async></script>
