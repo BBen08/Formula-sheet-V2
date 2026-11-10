@@ -235,6 +235,13 @@
     try { history.replaceState(null, "", location.pathname); } catch (err) { /* ignore */ }
   }
 
+  // Start the offline helper (sw.js) right away, also on the login screen, so
+  // the app itself is saved on the device before anyone logs in. (app.js
+  // registers it again after login; that is harmless and checks for updates.)
+  if ("serviceWorker" in navigator && document.querySelector('link[rel="manifest"]')) {
+    navigator.serviceWorker.register("sw.js").catch(function () { /* e.g. not https: just no offline */ });
+  }
+
   // ---------- start ----------
   // Fires once at start (INITIAL_SESSION) and again after logging in or out.
   // Supabase asks not to call it from inside this callback, hence setTimeout.
