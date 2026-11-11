@@ -40,18 +40,23 @@
 
     <form data-screen="login" id="login-form" hidden>
       <p class="gate-lead">Log in to see the formulas.</p>
-      <p>You get a login link by email. No password needed.</p>
+      <p>You get a login code by email. No password needed.</p>
       <label class="gate-label" for="login-email">Email address</label>
-      <input class="gate-input" id="login-email" type="email" autocomplete="email" inputmode="email" required placeholder="you@student.tudelft.nl">
-      <button class="gate-btn" id="login-send" type="submit">Send me a login link</button>
+      <input class="gate-input" id="login-email" type="email" autocomplete="email" inputmode="email" required placeholder="Enter your email address">
+      <button class="gate-btn" id="login-send" type="submit">Send me a code</button>
       <p class="gate-msg" id="login-msg" role="alert" hidden></p>
     </form>
 
-    <div data-screen="sent" hidden>
+    <form data-screen="code" id="code-form" hidden>
       <p class="gate-lead">Check your email.</p>
-      <p>We sent a login link to <strong data-fill="email"></strong>. Open it on this device to log in. It can take a minute; also check your spam folder.</p>
+      <p>We sent a code to <strong data-fill="email"></strong>. It can take a minute; also check your spam folder.</p>
+      <label class="gate-label" for="login-code">Code from the email</label>
+      <input class="gate-input gate-code" id="login-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required placeholder="123456">
+      <button class="gate-btn" id="code-send" type="submit">Log in</button>
+      <p class="gate-msg" id="code-msg" role="alert" hidden></p>
+      <button class="gate-btn gate-btn-quiet" id="code-again" type="button">Send a new code</button>
       <button class="gate-btn gate-btn-quiet" id="login-other" type="button">Use a different email</button>
-    </div>
+    </form>
 
     <div data-screen="noaccess" hidden>
       <p class="gate-lead">You're logged in, but you don't have access yet.</p>

@@ -48,6 +48,9 @@ class TestInstallablePage(unittest.TestCase):
         self.assertIn("startFormulaApp", self.body)
         self.assertIn("window.FormulaOffline", self.body)   # offline copy (offline.js)
         self.assertIn('data-screen="offline-old"', self.body)
+        self.assertIn('autocomplete="one-time-code"', self.body)   # login with a 6-digit code
+        self.assertIn("verifyOtp", self.body)
+        self.assertNotIn("tudelft", self.body.lower())             # no university in the placeholder
         self.assertIsNone(re.search(r"\{\{[A-Z_]+\}\}", self.html))   # every placeholder filled in
 
     def test_info_button_and_panel(self):

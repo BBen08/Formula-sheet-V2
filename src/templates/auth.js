@@ -1,8 +1,8 @@
 /* auth.js - Login and downloading the formulas (V2 only).
 
-   1. Not logged in?  Show the login screen: email -> Supabase sends a link.
-   2. Clicked the link? Supabase puts the login in the address bar; supabase-js
-      reads it and remembers it on this device (localStorage "formula-v2-auth").
+   1. Not logged in?  Show the login screen: email -> Supabase emails a code.
+   2. Typed the code? supabase-js checks it and remembers the login on this
+      device (localStorage "formula-v2-auth"). Old-style login links still work.
    3. Logged in: download the cards. The database only gives them to users with
       free_access or a paid_until in the future (see supabase/schema.sql).
       No cards -> "No access yet" screen. Cards -> start the app (app.js) and
@@ -52,35 +52,71 @@
     gate.hidden = true;
   }
 
-  // ---------- login form ----------
+  // ---------- login: email -> 6-digit code ----------
+  // The code is typed in the same app that asked for it. That matters on an
+  // iPhone: a link in an email always opens Safari, never the installed app.
   var form = $("login-form"), emailInput = $("login-email"), sendBtn = $("login-send"), msg = $("login-msg");
+  var codeForm = $("code-form"), codeInput = $("login-code"), codeBtn = $("code-send"), codeMsg = $("code-msg");
+  var email = "";
 
-  form.addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    var email = emailInput.value.trim();
-    if (!email) return;
-    sendBtn.disabled = true;
-    msg.hidden = true;
-    sb.auth.signInWithOtp({
+  function say(where, text) { where.textContent = text; where.hidden = !text; }
+
+  function sendCode(button, where) {
+    button.disabled = true;
+    say(where, "");
+    return sb.auth.signInWithOtp({
       email: email,
       options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true },
     }).then(function (res) {
-      sendBtn.disabled = false;
-      if (res.error) {
-        msg.textContent = res.error.status === 429
-          ? "Too many emails were sent just now. Please wait a few minutes and try again."
-          : "Could not send the email: " + res.error.message;
-        msg.hidden = false;
-        return;
-      }
-      show("sent", { email: email });
+      button.disabled = false;
+      if (!res.error) return true;
+      say(where, res.error.status === 429
+        ? "Too many emails were sent just now. Please wait a minute and try again."
+        : "Could not send the email: " + res.error.message);
+      return false;
     }, function () {
-      sendBtn.disabled = false;
-      msg.textContent = "No connection. Check your internet and try again.";
-      msg.hidden = false;
+      button.disabled = false;
+      say(where, "No connection. Check your internet and try again.");
+      return false;
+    });
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    email = emailInput.value.trim();
+    if (!email) return;
+    sendCode(sendBtn, msg).then(function (sent) {
+      if (!sent) return;
+      codeInput.value = "";
+      say(codeMsg, "");
+      show("code", { email: email });
+      codeInput.focus();
     });
   });
 
+  codeForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var token = codeInput.value.replace(/\D/g, "");    // "482 913" -> "482913"
+    if (!token) return;
+    codeBtn.disabled = true;
+    say(codeMsg, "");
+    sb.auth.verifyOtp({ email: email, token: token, type: "email" }).then(function (res) {
+      codeBtn.disabled = false;
+      // Logged in: onAuthStateChange (below) loads the formulas.
+      if (res.error) say(codeMsg, res.error.status === 429
+        ? "Too many tries. Please wait a minute."
+        : "That code is wrong or has expired. Check the latest email, or send a new code.");
+    }, function () {
+      codeBtn.disabled = false;
+      say(codeMsg, "No connection. Check your internet and try again.");
+    });
+  });
+
+  $("code-again").addEventListener("click", function () {
+    sendCode($("code-again"), codeMsg).then(function (sent) {
+      if (sent) say(codeMsg, "A new code is on its way. Use the newest email.");
+    });
+  });
   $("login-other").addEventListener("click", function () { show("login"); emailInput.focus(); });
 
   // Log out: delete the offline copy first, then the login itself. The login is

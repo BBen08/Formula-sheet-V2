@@ -305,3 +305,4 @@ html:not(.locked) .gate { display: none; }
   margin: 12px 0 0; padding: 8px 12px; border-radius: 9px;
   background: var(--chip); color: var(--muted); font-size: 14px;
 }
+.gate-code { font: 600 22px/1.2 var(--font-mono); letter-spacing: 0.25em; text-align: center; }
