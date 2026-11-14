@@ -5,7 +5,7 @@
 #   2. run src/main.py to build web/ (the app WITHOUT formulas: those are only
 #      in the Supabase database, uploaded from the laptop with upload_cards.py)
 #   3. a last check that no formulas or secret keys are in web/
-#   4. publish web/ on GitHub Pages: https://bben08.github.io/Formula-sheet-V2/
+#   4. publish web/ on GitHub Pages: https://bben08.github.io/Formula-Finder/
 name: Publish V2
 
 on:

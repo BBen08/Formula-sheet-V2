@@ -339,7 +339,7 @@ window.startFormulaApp = function (DATA) {
   });
 
   // ---------- Owner mode: the TeX buttons only on your own devices ----------
-  // Tap the title "Formula Finder V2" in the info panel 5 times quickly to turn
+  // Tap the title "Formula Finder" in the info panel 5 times quickly to turn
   // it on or off. It is remembered on this device only; others never see it.
   function setOwner(on) {
     document.documentElement.classList.toggle("owner", on);

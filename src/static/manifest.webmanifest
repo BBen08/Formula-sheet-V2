@@ -1,6 +1,6 @@
 {
-  "name": "Formula Finder V2",
-  "short_name": "Formulas V2",
+  "name": "Formula Finder",
+  "short_name": "Formulas",
   "description": "My searchable formula sheets, built from my LaTeX files.",
   "start_url": "./",
   "scope": "./",
